@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -16,7 +16,7 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
@@ -29,18 +29,104 @@ async function run() {
 
     const carCollection = client.db("carsDB").collection("cars");
 
-    app.get("/cars", async(req, res) => {
+    app.get("/cars", async (req, res) => {
       const findData = carCollection.find();
       const convertToArray = await findData.toArray();
       res.send(convertToArray);
     });
 
-    app.post("/cars", async(req, res) => {
+    app.get("/car/:id", async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+
+      const findResult = await carCollection.findOne(query);
+      res.send(findResult);
+    });
+
+    app.get("/my-cars", async (req, res) => {
+      const { email, sortType } = req.query;
+      const query = { "userDetails.email": email };
+      let sorted = {};
+      if (sortType == "Date Added: Newest First") {
+        sorted = { dateAdded: -1 };
+      }
+      if (sortType == "Date Added: Oldest First") {
+        sorted = { dateAdded: 1 };
+      }
+      if (sortType == "Price: Lowest First") {
+        sorted = { price: 1 };
+      }
+      if (sortType == "Price: Highest First") {
+        sorted = { price: -1 };
+      }
+
+      const findData = carCollection.find(query).sort(sorted);
+      const convertToArray = await findData.toArray();
+      res.send(convertToArray);
+    });
+
+    app.get("/available-cars", async (req, res) => {
+     const {sortType, search} = req.query;
+     let searchTerm = {};
+
+    //  if(search === "")
+
+      let sorted = {};
+      if (sortType == "Date Added: Newest First") {
+        sorted = { dateAdded: -1 };
+      }
+      if (sortType == "Date Added: Oldest First") {
+        sorted = { dateAdded: 1 };
+      }
+      if (sortType == "Price: Lowest First") {
+        sorted = { price: 1 };
+      }
+      if (sortType == "Price: Highest First") {
+        sorted = { price: -1 };
+      }
+
+      const findData = carCollection.find().sort(sorted);
+      const convertToArray = await findData.toArray();
+      res.send(convertToArray);
+    });
+
+    app.post("/cars", async (req, res) => {
       const carsData = req.body;
       // console.log(carsData);
 
       const insertResult = await carCollection.insertOne(carsData);
       res.send(insertResult);
+    });
+
+    app.patch("/update-car/:id", async (req, res) => {
+      const carInfo = req.body;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const updateInfo = {
+        $set: {
+          model: carInfo?.model,
+          price: carInfo?.price,
+          availability: carInfo?.availability,
+          registrationNumber: carInfo?.registrationNumber,
+          features: carInfo?.features,
+          description: carInfo?.description,
+          image: carInfo?.image,
+          location: carInfo?.location,
+        },
+      };
+
+      const updateResult = await carCollection.updateOne(query, updateInfo);
+
+      res.send(updateResult);
+    });
+
+    app.delete("/delete-car/:id", async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+
+      const deleteResult = await carCollection.deleteOne(query);
+      res.send(deleteResult);
     });
 
   } finally {
