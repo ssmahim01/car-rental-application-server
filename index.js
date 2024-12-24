@@ -9,7 +9,7 @@ const port = process.env.PORT || 4000;
 
 app.use(
   cors({
-    origin: ["http://localhost:4000"],
+    origin: ["http://localhost:5173"],
     credentials: true,
   })
 );
@@ -89,6 +89,13 @@ async function run() {
       res.send(convertToArray);
     });
 
+    app.get("/recent-listings", async(req, res) => {
+      const findAll = carCollection.find({});
+      const result = await findAll.sort({dateAdded: -1}).limit(8).toArray();
+
+      res.send(result);
+    });
+
     app.get("/car/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -97,7 +104,7 @@ async function run() {
       res.send(findResult);
     });
 
-    app.get("/my-cars", verifyToken, async (req, res) => {
+    app.get("/my-cars", async (req, res) => {
       const { email, sortType } = req.query;
       const query = { "userDetails.email": email };
       let sorted = {};
@@ -190,7 +197,7 @@ async function run() {
     });
 
     // Booked Cars collection
-    app.get("/booked-cars", verifyToken, async (req, res) => {
+    app.get("/booked-cars", async (req, res) => {
       const findData = bookCollection.find();
       const result = await findData.toArray();
       res.send(result);
