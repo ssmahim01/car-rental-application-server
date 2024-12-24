@@ -2,11 +2,38 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:4000"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+app.use(cookieParser());
+
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+
+  jwt.verify(token, process.env.SECRET_TOKEN, (error, decoded) => {
+    if (error) {
+      return res.status(401).send({ message: "Unauthorized access" });
+    }
+
+    req.user = decoded;
+
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.ybs8l.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -28,22 +55,49 @@ async function run() {
     console.log("Pinged your deployment. Successfully connected to MongoDB!");
 
     const carCollection = client.db("carsDB").collection("cars");
+    const bookCollection = client.db("carsDB").collection("bookedCars");
 
+    // JWT
+    app.post("jwt-access", async (req, res) => {
+      const user = req.body;
+
+      const token = jwt.sign(user, process.env.SECRET_TOKEN, {
+        expiresIn: "2d",
+      });
+
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: false,
+        })
+        .send({ successStatus: true });
+    });
+
+    app.post("log-out", (req, res) => {
+      res
+        .clearCookie("token", {
+          httpOnly: true,
+          secure: false,
+        })
+        .send({ successStatus: true });
+    });
+
+    // Cars collection
     app.get("/cars", async (req, res) => {
       const findData = carCollection.find();
       const convertToArray = await findData.toArray();
       res.send(convertToArray);
     });
 
-    app.get("/car/:id", async(req, res) => {
+    app.get("/car/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
 
       const findResult = await carCollection.findOne(query);
       res.send(findResult);
     });
 
-    app.get("/my-cars", async (req, res) => {
+    app.get("/my-cars", verifyToken, async (req, res) => {
       const { email, sortType } = req.query;
       const query = { "userDetails.email": email };
       let sorted = {};
@@ -66,10 +120,16 @@ async function run() {
     });
 
     app.get("/available-cars", async (req, res) => {
-     const {sortType, search} = req.query;
-     let searchTerm = {};
+      const { sortType, search } = req.query;
+      let searchTerm = {};
 
-    //  if(search === "")
+      //  if(search){
+      //   searchTerm = {model: {$regex: search, $options: "i"}};
+      //  }
+
+      if (search) {
+        searchTerm = { location: { $regex: search, $options: "i" } };
+      }
 
       let sorted = {};
       if (sortType == "Date Added: Newest First") {
@@ -85,7 +145,7 @@ async function run() {
         sorted = { price: -1 };
       }
 
-      const findData = carCollection.find().sort(sorted);
+      const findData = carCollection.find(searchTerm).sort(sorted);
       const convertToArray = await findData.toArray();
       res.send(convertToArray);
     });
@@ -121,14 +181,27 @@ async function run() {
       res.send(updateResult);
     });
 
-    app.delete("/delete-car/:id", async(req, res) => {
+    app.delete("/delete-car/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
 
       const deleteResult = await carCollection.deleteOne(query);
       res.send(deleteResult);
     });
 
+    // Booked Cars collection
+    app.get("/booked-cars", verifyToken, async (req, res) => {
+      const findData = bookCollection.find();
+      const result = await findData.toArray();
+      res.send(result);
+    });
+
+    app.post("/booked-cars", async (req, res) => {
+      const bookedData = req.body;
+
+      const insertResult = await bookCollection.insertOne(bookedData);
+      res.send(insertResult);
+    });
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
