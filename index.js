@@ -89,9 +89,9 @@ async function run() {
       res.send(convertToArray);
     });
 
-    app.get("/recent-listings", async(req, res) => {
+    app.get("/recent-listings", async (req, res) => {
       const findAll = carCollection.find({});
-      const result = await findAll.sort({dateAdded: -1}).limit(8).toArray();
+      const result = await findAll.sort({ dateAdded: -1 }).limit(8).toArray();
 
       res.send(result);
     });
@@ -205,8 +205,8 @@ async function run() {
 
     app.get("/my-bookings", async (req, res) => {
       const email = req.query.email;
-      let query = {'userInfo.email': email};
-      
+      let query = { "userInfo.email": email };
+
       const findData = bookCollection.find(query);
       const result = await findData.toArray();
       res.send(result);
@@ -218,6 +218,22 @@ async function run() {
       const insertResult = await bookCollection.insertOne(bookedData);
       res.send(insertResult);
     });
+
+    app.patch("/cancel-status/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const updateInfo = {
+        $set: {
+          status: "Canceled",
+        },
+      };
+
+      const result = await bookCollection.updateOne(query, updateInfo);
+
+      res.send(result);
+    });
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
