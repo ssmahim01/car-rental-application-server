@@ -203,6 +203,15 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/my-bookings", async (req, res) => {
+      const email = req.query.email;
+      let query = {'userInfo.email': email};
+      
+      const findData = bookCollection.find(query);
+      const result = await findData.toArray();
+      res.send(result);
+    });
+
     app.post("/booked-cars", async (req, res) => {
       const bookedData = req.body;
 
