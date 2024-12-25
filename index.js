@@ -19,6 +19,7 @@ app.use(cookieParser());
 
 const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
+  // console.log(token);
 
   if (!token) {
     return res.status(401).send({ message: "Unauthorized access" });
@@ -58,28 +59,29 @@ async function run() {
     const bookCollection = client.db("carsDB").collection("bookedCars");
 
     // JWT
-    app.post("jwt-access", async (req, res) => {
+    app.post("/jwt-access", async (req, res) => {
       const user = req.body;
 
       const token = jwt.sign(user, process.env.SECRET_TOKEN, {
         expiresIn: "2d",
       });
+      // console.log(token);
 
       res
         .cookie("token", token, {
           httpOnly: true,
           secure: false,
         })
-        .send({ successStatus: true });
+        .send({ success: true });
     });
 
-    app.post("log-out", (req, res) => {
+    app.post("/log-out", (req, res) => {
       res
         .clearCookie("token", {
           httpOnly: true,
           secure: false,
         })
-        .send({ successStatus: true });
+        .send({ success: true });
     });
 
     // Cars collection
@@ -203,7 +205,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/my-bookings", async (req, res) => {
+    app.get("/my-bookings", verifyToken, async (req, res) => {
       const email = req.query.email;
       let query = { "userInfo.email": email };
 
@@ -230,7 +232,22 @@ async function run() {
       };
 
       const result = await bookCollection.updateOne(query, updateInfo);
+      res.send(result);
+    });
 
+    app.patch("/modify-dates/:id", async (req, res) => {
+      const dates = req.body;
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+
+      const modifyDates = {
+        $set: {
+          bookingStartDate: dates?.bookingStartDate,
+          bookingEndDate: dates?.bookingEndDate,
+        },
+      };
+
+      const result = await bookCollection.updateOne(query, modifyDates);
       res.send(result);
     });
 
