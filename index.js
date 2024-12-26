@@ -112,8 +112,14 @@ async function run() {
       res.send(findResult);
     });
 
-    app.get("/my-cars", async (req, res) => {
+    app.get("/my-cars", verifyToken, async (req, res) => {
       const { email, sortType } = req.query;
+      const decodedEmail = req.user?.email;
+
+      if (email !== decodedEmail) {
+        return res.status(401).send({ message: "Unauthorized access" });
+      }
+
       const query = { "userDetails.email": email };
       let sorted = {};
       if (sortType == "Date Added: Newest First") {
@@ -213,6 +219,12 @@ async function run() {
 
     app.get("/my-bookings", verifyToken, async (req, res) => {
       const email = req.query.email;
+      const userEmail = req.user?.email;
+
+      if (email !== userEmail) {
+        return res.status(401).send({ message: "Unauthorized access" });
+      }
+
       let query = { "userInfo.email": email };
 
       const findData = bookCollection.find(query);
@@ -222,8 +234,33 @@ async function run() {
 
     app.post("/booked-cars", async (req, res) => {
       const bookedData = req.body;
-
       const insertResult = await bookCollection.insertOne(bookedData);
+
+      const query = {
+        email: bookedData.userInfo?.email,
+        carId: bookedData?.carId,
+      };
+
+      const existedData = await carCollection.findOne(query);
+      if (existedData) {
+        return res
+          .status(400)
+          .send({ message: "You have already booked the car" });
+      }
+
+      const findCar = { _id: new ObjectId(bookedData.carId) };
+      const carData = await carCollection.findOne(findCar);
+
+      if (carData && typeof carData.bookingCount !== "number") {
+        await carCollection.updateOne(findCar, { $set: { bookingCount: 0 } });
+      }
+
+      const updateCount = {
+        $inc: { bookingCount: 1 },
+      };
+
+      await carCollection.updateOne(findCar, updateCount);
+
       res.send(insertResult);
     });
 
