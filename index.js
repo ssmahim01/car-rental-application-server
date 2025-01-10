@@ -129,10 +129,10 @@ async function run() {
         sorted = { dateAdded: 1 };
       }
       if (sortType == "Price: Lowest First") {
-        sorted = { price: -1 };
+        sorted = { price: 1 };
       }
       if (sortType == "Price: Highest First") {
-        sorted = { price: 1 };
+        sorted = { price: -1 };
       }
 
       const findData = carCollection.find(query).sort(sorted);
@@ -159,12 +159,12 @@ async function run() {
       if (sortType == "Date Added: Oldest First") {
         sorted = { dateAdded: 1 };
       }
-      if (sortType == "Price: Lowest First") {
-        sorted = { price: -1 };
-      }
-      if (sortType == "Price: Highest First") {
-        sorted = { price: 1 };
-      }
+      // if (sortType == "Price: Lowest First") {
+      //   sorted = { price: -1 };
+      // }
+      // if (sortType == "Price: Highest First") {
+      //   sorted = { price: 1 };
+      // }
 
       const findData = carCollection.find(searchTerm).sort(sorted);
       const convertToArray = await findData.toArray();
