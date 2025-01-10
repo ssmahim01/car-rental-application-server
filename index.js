@@ -99,7 +99,7 @@ async function run() {
 
     app.get("/recent-listings", async (req, res) => {
       const findAll = carCollection.find({});
-      const result = await findAll.sort({ dateAdded: -1 }).limit(8).toArray();
+      const result = await findAll.sort({ dateAdded: -1 }).limit(6).toArray();
 
       res.send(result);
     });
@@ -129,10 +129,10 @@ async function run() {
         sorted = { dateAdded: 1 };
       }
       if (sortType == "Price: Lowest First") {
-        sorted = { price: 1 };
+        sorted = { price: -1 };
       }
       if (sortType == "Price: Highest First") {
-        sorted = { price: -1 };
+        sorted = { price: 1 };
       }
 
       const findData = carCollection.find(query).sort(sorted);
@@ -160,10 +160,10 @@ async function run() {
         sorted = { dateAdded: 1 };
       }
       if (sortType == "Price: Lowest First") {
-        sorted = { price: 1 };
+        sorted = { price: -1 };
       }
       if (sortType == "Price: Highest First") {
-        sorted = { price: -1 };
+        sorted = { price: 1 };
       }
 
       const findData = carCollection.find(searchTerm).sort(sorted);
