@@ -97,6 +97,13 @@ async function run() {
       res.send(convertToArray);
     });
 
+    app.get("/featured-cars", async(req, res) => {
+      const sortByPrice = {price: -1};
+      const findCars = carCollection.find({});
+      const result = await findCars.sort(sortByPrice).limit(6).toArray();
+      res.send(result);
+    });
+
     app.get("/recent-listings", async (req, res) => {
       const findAll = carCollection.find({});
       const result = await findAll.sort({ dateAdded: -1 }).limit(6).toArray();
